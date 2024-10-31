@@ -1,25 +1,41 @@
-import pandas as pd
-import glob
+import csv
 
-# Path to the data folder containing the CSV files
-data_files = glob.glob('data/daily_sales_data_*.csv')
+# Define the path to the input and output files
+input_file_path = 'data/daily_sales_data_0.csv'
+output_file_path = 'data/formatted_sales_data.csv'
 
-# Initialize an empty DataFrame to hold the formatted data
-formatted_data = pd.DataFrame(columns=['sales', 'date', 'region'])
+# Initialize the output data list
+output_data = []
 
-# Process each CSV file
-for file in data_files:
-    # Load the data
-    data = pd.read_csv(file)
+# Open and process the CSV file
+with open(input_file_path, mode='r') as file:
+    reader = csv.reader(file)
+    header = next(reader)  # Skip header row
 
-    # Filter for "Pink Morsels" only
-    pink_morsels_data = data[data['product'] == 'pink morsel']
+    for input_row in reader:
+        # Check if the row has the expected number of columns
+        if len(input_row) < 4:
+            print(f"Skipping row with missing values: {input_row}")
+            continue  # Skip rows with missing columns
 
-    # Calculate the "sales" field by multiplying "quantity" by "price"
-    pink_morsels_data['sales'] = pink_morsels_data['quantity'] * pink_morsels_data['price']
+        try:
+            product = input_row[0].strip().lower()
+            quantity = int(input_row[1])
+            price = float(input_row[2])
+            transaction_date = input_row[3]
+            region = input_row[4] if len(input_row) > 4 else "Unknown"  # Use "Unknown" if region is missing
 
-    # Select the relevant columns
-    formatted_data = pd.concat([formatted_data, pink_morsels_data[['sales', 'date', 'region']]])
+            # Only process "pink morsel" product
+            if product == "pink morsel":
+                sales = quantity * price
+                output_data.append([sales, transaction_date, region])
+        except ValueError as e:
+            print(f"Error processing row {input_row}: {e}")
 
-# Save the formatted data to a new CSV file
-formatted_data.to_csv('data/formatted_sales_data.csv', index=False)
+# Write the formatted data to the output CSV file
+with open(output_file_path, mode='w', newline='') as file:
+    writer = csv.writer(file)
+    writer.writerow(["sales", "date", "region"])  # Write header
+    writer.writerows(output_data)
+
+print("Data processing complete. Output saved to:", output_file_path)
